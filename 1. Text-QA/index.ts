@@ -20,14 +20,31 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // defaults to process.env["OPENAI_API_KEY"]
 });
 
-const start = async () => {
-  const index = await pinecone.Index(pineconeIdx); // upserting or fetching data from this index
+type PineconeMetadata = {
+  text: string;
+};
 
-  // modifying text file
-  await modifyInputFile();
+const start = async () => {
+  // const index = await pinecone.index<PineconeMetadata>(pineconeIdx);
+
+  const index = await pinecone.index(pineconeIdx); // upserting or fetching data from this index
+
+  // STEP-1 (modifying text file)
+
+  // await modifyInputFile();
+
+  // STEP-2 (generate vector embeddings for input)
+
+  // const embeds = await createEmbeddingsForChunks();
+
+  // STEP-3 (store embedding data in pinecone db)
+
+  // await addDataToPineconeIndex({ index, embeds });
 };
 
 start();
+
+// ******************************************************************************************************************************************
 
 const readText = async (isClean = false) => {
   let txt = '';
@@ -56,4 +73,75 @@ const cleanText = async () => {
 
 async function modifyInputFile() {
   await cleanText();
+}
+
+// ******************************************************************************************************************************************
+
+const createChunks = async () => {
+  const wikiData = await readText(true);
+  const lines = wikiData.split('\n');
+
+  const chunks = [];
+
+  for (let i = 0; i < lines.length; i += 2) {
+    const chunk = lines.slice(i, i + 2); // each chunk contains 2 lines (to have semantic meaning in each chunk)
+    chunks.push(chunk.join('\n'));
+  }
+
+  // console.log(chunks.length, ' => chunks: ', chunks);
+  return chunks;
+};
+
+// wrapper for openai function i.e we will be passing chunks to it.
+const createEmbeddings = async (text: string) => {
+  const config = {
+    model: 'text-embedding-ada-002',
+    input: text,
+  };
+
+  const response = await openai.embeddings.create(config);
+  return response;
+};
+
+async function createEmbeddingsForChunks() {
+  const chunks = await createChunks();
+
+  const embeddings = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const embedding = await createEmbeddings(chunk);
+
+    embeddings.push({
+      text: chunk,
+      embedding: embedding.data[0].embedding,
+    });
+  }
+
+  // console.dir({ embeddings }, { depth: null });
+  return embeddings;
+}
+
+interface AddDataToPineconeParams {
+  index: any;
+  embeds: {
+    text: string;
+    embedding: number[];
+  }[];
+}
+
+async function addDataToPineconeIndex(params: AddDataToPineconeParams) {
+  const { index, embeds } = params;
+  const configs = [];
+
+  for (let i = 0; i < embeds.length; i++) {
+    const embed = embeds[i];
+
+    configs.push({
+      id: `vec_${i}`,
+      values: embed.embedding,
+      metadata: { text: embed.text },
+    });
+  }
+
+  await index.upsert(configs);
 }
