@@ -40,6 +40,12 @@ const start = async () => {
   // STEP-3 (store embedding data in pinecone db)
 
   // await addDataToPineconeIndex({ index, embeds });
+
+  // STEP-4 (ask question)
+
+  const question = 'where was virat kohli born ?';
+  const similarChunk = await getSimilarChunk(index, question);
+  await createChatCompletion(similarChunk.matches[0].metadata.text, question);
 };
 
 start();
@@ -121,6 +127,8 @@ async function createEmbeddingsForChunks() {
   return embeddings;
 }
 
+// ******************************************************************************************************************************************
+
 interface AddDataToPineconeParams {
   index: any;
   embeds: {
@@ -144,4 +152,46 @@ async function addDataToPineconeIndex(params: AddDataToPineconeParams) {
   }
 
   await index.upsert(configs);
+}
+
+// ******************************************************************************************************************************************
+
+async function getSimilarChunk(index: any, question: string) {
+  const questionEmbedding = await createEmbeddings(question);
+  const queryOptions = {
+    topK: 3,
+    vector: questionEmbedding.data[0].embedding,
+    includeMetadata: true,
+    includeValues: false,
+  };
+
+  const results = await index.query(queryOptions);
+
+  // console.dir({ similarChunk: results }, { depth: null });
+  return results;
+}
+
+// to give to the point answer
+async function createChatCompletion(content: string, question: string) {
+  const config = {
+    model: 'gpt-3.5-turbo',
+    messages: [
+      {
+        role: 'system',
+        content: `You are an AI assistant, answer user questions based on content below. Don't respond if question is not related to following content \n\n ${content}`,
+      },
+      {
+        role: 'user',
+        content: question,
+      },
+    ],
+  };
+
+  const response = await openai.chat.completions.create(config);
+
+  console.dir(
+    { response: response.choices[0].message.content },
+    { depth: null }
+  );
+  return response;
 }
