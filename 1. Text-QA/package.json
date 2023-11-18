@@ -4,7 +4,7 @@
   "description": "interact with text file",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon index.ts"
   },
   "repository": {
     "type": "git",
@@ -21,5 +21,8 @@
     "dotenv": "^16.3.1",
     "nodemon": "^3.0.1",
     "openai": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.1"
   }
 }

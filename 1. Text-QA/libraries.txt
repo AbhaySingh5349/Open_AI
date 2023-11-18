@@ -1,4 +1,14 @@
-npm i @pinecone-database/pinecone
+// setup for node
+
 npm i dotenv
 npm i nodemon
+
+// setup for pinecone and openai
+
+npm i @pinecone-database/pinecone
 npm i openai
+
+// setup for typescript
+
+npx tsc --init
+npm i --save-dev @types/node
