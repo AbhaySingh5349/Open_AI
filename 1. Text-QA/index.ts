@@ -22,6 +22,38 @@ const openai = new OpenAI({
 
 const start = async () => {
   const index = await pinecone.Index(pineconeIdx); // upserting or fetching data from this index
+
+  // modifying text file
+  await modifyInputFile();
 };
 
 start();
+
+const readText = async (isClean = false) => {
+  let txt = '';
+  if (isClean) {
+    txt = fs.readFileSync('./cleaned_wikipedia.txt', 'utf-8');
+  } else {
+    txt = fs.readFileSync('./wikipedia.txt', 'utf-8');
+  }
+
+  // console.log('text: ', txt);
+  return txt;
+};
+
+const cleanText = async () => {
+  const txt = await readText();
+
+  const lines = txt.split('\n');
+  let cleanedLines = lines.map((line) => {
+    const cleanedLine = line.replace(/[^a-zA-Z ]/g, ''); // replace non-chars with ''
+    return cleanedLine;
+  });
+
+  cleanedLines = cleanedLines.filter((line) => line.length > 0); // removing empty strings
+  fs.writeFileSync('./cleaned_wikipedia.txt', cleanedLines.join('\n'));
+};
+
+async function modifyInputFile() {
+  await cleanText();
+}
