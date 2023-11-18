@@ -1,0 +1,4 @@
+npm i @pinecone-database/pinecone
+npm i dotenv
+npm i nodemon
+npm i openai
